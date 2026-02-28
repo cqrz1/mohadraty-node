@@ -2,40 +2,44 @@
 
 Migrated educational portal from ASP.NET Web Forms to Node.js with server-rendered EJS views, SQL Server backend, file uploads, and admin RBAC.
 
-## Stack
+## نظرة سريعة
+- بوابة تعليمية بواجهة عربية RTL.
+- تسجيل دخول طلاب وإدارة بنفس منطق المشروع الأصلي.
+- SQL Server + Sequelize + جلسات `express-session`.
+- رفع ملفات للمحاضرات والشيتات وصور المستخدمين.
+
+## Tech Stack
 - Node.js 20+
 - Express
 - EJS
-- Sequelize + tedious (SQL Server)
+- Sequelize + `tedious` (MSSQL)
 - express-session
 - multer
 
 ## Core Features
-- Student login by `student_id + exact student_name`.
-- Admin login by `admin_name + admin_id`.
-- Student dashboard filtered by academic year + major.
-- Professor/lectures/sheets access checks per student constraints.
-- Full admin management for students/professors/lectures/sheets.
-- File uploads with extension validation:
-  - photos: `.jpg/.jpeg/.png`
-  - lectures: `.pdf/.ppt/.pptx`
-  - sheets: `.pdf/.docx`
-- Cascade cleanup of files on delete operations.
-- Arabic RTL UI.
+- Student login using `student_id + exact student_name` (trim-aware).
+- Admin login using `admin_name + admin_id`.
+- Dashboard filter by student `academic_year + major`.
+- Access control on professor/lectures/sheets based on student scope.
+- Admin CRUD for students/professors/lectures/sheets.
+- Upload validation:
+  - Photos: `.jpg/.jpeg/.png`
+  - Lectures: `.pdf/.ppt/.pptx`
+  - Sheets: `.pdf/.docx`
+- Cleanup files when related DB records are deleted.
 
-## RBAC (Admin Roles)
-- Roles in `admins.role`:
+## Admin RBAC
+- Roles are stored in `admins.role`:
   - `superadmin`
   - `admin`
-- Super Admin can:
-  - Add/edit/delete admins
-  - Manage all resources (including delete-sensitive actions)
-- Regular Admin can:
-  - Add admins (as `admin` only)
-  - Edit professors
-  - Add lectures/sheets
-  - View data
-- Privilege escalation protections are enforced in middleware + service layer.
+- `superadmin`:
+  - Full access to all admin routes.
+  - Can add/edit/delete admins.
+  - Can perform sensitive deletes.
+- `admin`:
+  - Can add admins as regular `admin` only.
+  - Can manage professors/lectures/sheets within allowed actions.
+  - Cannot delete admins or modify superadmin role/account.
 
 ## Project Structure
 ```text
@@ -61,45 +65,42 @@ npm install
 
 2. Configure environment:
 - Copy `.env.example` to `.env`
-- Update DB credentials for your SQL Server instance
+- Update SQL Server settings (host/instance/port/user/password/database)
 
-3. Prepare database:
-- Fresh setup:
-  - run `scripts/mssql-migration-seed.sql`
-- Existing DB upgrade (RBAC only):
-  - run `scripts/mssql-admin-rbac-migration.sql`
+3. Create/upgrade database:
+- Fresh database:
+  - Run `scripts/mssql-migration-seed.sql`
+- RBAC upgrade on existing DB:
+  - Run `scripts/mssql-admin-rbac-migration.sql`
 
-4. Validate config:
+4. Validate configuration:
 ```bash
 npm run check
 ```
 
-5. Start server:
+5. Start app:
 ```bash
 npm start
 ```
 
-Open: `http://localhost:3000`
+Open `http://localhost:3000`.
 
 ## Default Seed Accounts
-- Super Admin:
-  - username: `admin`
-  - password: `1`
-- Admin:
-  - username: `superadmin`
-  - password: `2024`
-- Student:
-  - `student_id=21141611`, `student_name=طالب تجريبي`
+- Super Admin: `admin` / `1`
+- Admin: `superadmin` / `2024`
+- Student: `21141611` / `طالب تجريبي`
 
-## Useful Scripts
-- `npm start` - run production server
+## Scripts
+- `npm start` - run server
 - `npm run dev` - run with nodemon
-- `npm run check` - local health/config checks
+- `npm run check` - environment and DB checks
 
 ## Notes
-- `.env` is ignored from git. Use `.env.example` for safe sharing.
-- Ensure SQL Server service is running (`SQLEXPRESS`) before starting app.
-- Uploaded files are stored under:
+- `.env` is ignored from Git for safety.
+- Static/upload paths kept compatible with old system:
   - `ProfessorsImages/`
   - `uploads/lectures/`
   - `uploads/sheets/`
+- For SQL Server Express, ensure services are running:
+  - `MSSQL$SQLEXPRESS`
+  - `SQLBrowser`
