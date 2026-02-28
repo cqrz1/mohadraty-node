@@ -1,0 +1,53 @@
+<%- include('../partials/student_top', { title: title }) %>
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-5">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px;">
+        <i class="bi bi-file-earmark-slides-fill fs-4"></i>
+      </div>
+      <div>
+        <h2 class="fw-bold mb-1 gradient-text">المحاضرات الدراسية</h2>
+        <p class="text-muted mb-0">تصفح وحمل ملفات الشرح الخاصة بالمواد</p>
+      </div>
+    </div>
+    <a href="/professor" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-arrow-right me-1"></i> العودة
+    </a>
+  </div>
+
+  <% if (message) { %>
+  <div class="alert alert-info border-0 shadow-sm text-center d-block mb-4 rounded-4"><%= message %></div>
+  <% } %>
+
+  <div class="row g-4">
+    <% lectures.forEach((lecture) => { %>
+    <div class="col-lg-6">
+      <div class="card action-card p-4 border-0 shadow-sm h-100">
+        <div class="d-flex align-items-center gap-4">
+          <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-4 shadow-sm">
+            <i class="bi bi-file-earmark-slides-fill" style="font-size: 2rem;"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h5 class="fw-bold mb-1 text-main"><%= lecture.lecture_name %></h5>
+            <p class="text-muted small mb-0"><i class="bi bi-person-fill small me-1"></i> د. <%= lecture.professor_name %></p>
+          </div>
+          <div>
+            <a href="/<%= lecture.lecture_file %>" target="_blank" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm d-flex align-items-center gap-2">
+              <i class="bi bi-cloud-arrow-down-fill"></i><span class="fw-bold">تحميل</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+
+  <% if (!lectures.length) { %>
+  <div class="text-center py-5 opacity-50">
+    <i class="bi bi-folder-x fa-4x mb-3 d-block"></i>
+    <h5 class="fw-bold">لا توجد محاضرات متاحة حالياً</h5>
+    <p>يرجى مراجعة الموقع لاحقاً للمستجدات</p>
+  </div>
+  <% } %>
+</div>
+<%- include('../partials/student_bottom') %>

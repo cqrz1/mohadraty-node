@@ -1,0 +1,153 @@
+﻿<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole }) %>
+<div class="container pb-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px;">
+        <i class="bi bi-mortarboard-fill fs-4"></i>
+      </div>
+      <div>
+        <h2 class="fw-bold mb-0">إدارة الدكاترة</h2>
+        <p class="text-muted small mb-0">إضافة وتعديل بيانات أعضاء هيئة التدريس</p>
+      </div>
+    </div>
+    <a href="/admin" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-arrow-right me-1"></i> لوحة التحكم
+    </a>
+  </div>
+
+  <div class="card p-4 border-0 shadow-sm mb-5">
+    <h5 class="fw-bold mb-4 text-primary">
+      <i class="bi <%= editProfessor ? 'bi-pencil-square' : 'bi-person-plus' %> me-2"></i>
+      <%= editProfessor ? 'تعديل بيانات الدكتور' : 'إضافة دكتور جديد' %>
+    </h5>
+
+    <form action="/admin/professors/save" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="edit_id" value="<%= editProfessor ? editProfessor.professor_id : '' %>">
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">اسم الدكتور</label>
+          <input type="text" name="professor_name" class="form-control" placeholder="الاسم الرباعي" value="<%= editProfessor ? editProfessor.professor_name : '' %>">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">المادة العلمية</label>
+          <input type="text" name="subject_name" class="form-control" placeholder="اسم المادة" value="<%= editProfessor ? editProfessor.subject_name : '' %>">
+        </div>
+      </div>
+
+      <div class="row g-3 mt-1">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">الفرقة الدراسية</label>
+          <select name="academic_year" class="form-select">
+            <% formOptions.years.forEach((year) => { %>
+            <option value="<%= year %>" <%= editProfessor && editProfessor.academic_year === year ? 'selected' : '' %>><%= year %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">التخصص</label>
+          <select name="major" class="form-select">
+            <% formOptions.majors.forEach((major) => { %>
+            <option value="<%= major %>" <%= editProfessor && editProfessor.major === major ? 'selected' : '' %>><%= major %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label small fw-bold">صورة الدكتور</label>
+        <input type="file" name="professor_photo" class="form-control" accept=".jpg,.jpeg,.png">
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary text-white fw-bold px-5 rounded-pill shadow-sm"><%= editProfessor ? 'حفظ التعديلات' : 'إضافة دكتور جديد' %></button>
+        <% if (editProfessor) { %>
+        <a href="/admin/professors" class="btn btn-outline-secondary rounded-pill px-4">إلغاء التعديل</a>
+        <% } %>
+      </div>
+    </form>
+  </div>
+
+  <div class="row align-items-center mb-4 g-3">
+    <div class="col-md-6">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-people text-primary"></i>
+        <h5 class="fw-bold mb-0">هيئة التدريس المسجلة</h5>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
+        <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" id="profSearch" class="form-control border-0 py-2 small" placeholder="ابحث باسم الدكتور أو المادة..." onkeyup="filterProfessors()">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>الدكتور</th>
+          <th>المادة</th>
+          <th>المستوى التعليمي</th>
+          <th class="text-center">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% professors.forEach((professor) => { %>
+        <tr class="shadow-sm">
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <img src="<%= professor.professor_photo %>" alt="Professor" class="rounded-pill shadow-sm" style="width:50px;height:50px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/50?text=P'">
+              <span class="fw-bold text-main"><%= professor.professor_name %></span>
+            </div>
+          </td>
+          <td><span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-3 py-2 rounded-pill shadow-sm"><%= professor.subject_name %></span></td>
+          <td>
+            <p class="mb-0 small fw-bold"><%= professor.academic_year %></p>
+            <p class="mb-0 text-muted extra-small"><%= professor.major %></p>
+          </td>
+          <td class="text-center">
+            <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+              <a class="btn btn-warning btn-sm text-white px-3" href="/admin/professors?editId=<%= professor.professor_id %>"><i class="bi bi-pencil-square"></i></a>
+              <% if (isSuperAdmin) { %>
+              <form action="/admin/professors/delete/<%= professor.professor_id %>" method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا الدكتور وجميع مرفقاته؟');">
+                <button type="submit" class="btn btn-outline-danger btn-sm px-3"><i class="bi bi-trash"></i></button>
+              </form>
+              <% } %>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if (!professors.length) { %>
+  <div class="text-center py-5 opacity-50">
+    <i class="bi bi-mortarboard fs-1 d-block mb-3"></i>
+    <h6>لا يوجد دكاترة مسجلون حاليًا</h6>
+  </div>
+  <% } %>
+</div>
+
+<script>
+  function filterProfessors() {
+    const input = document.getElementById('profSearch');
+    const filter = input.value.toLowerCase();
+    const table = document.querySelector('.table');
+    const rows = table.getElementsByTagName('tr');
+
+    for (let i = 1; i < rows.length; i += 1) {
+      const nameCol = rows[i].getElementsByTagName('td')[0];
+      const subjectCol = rows[i].getElementsByTagName('td')[1];
+      if (nameCol && subjectCol) {
+        const nameText = nameCol.textContent || nameCol.innerText;
+        const subjectText = subjectCol.textContent || subjectCol.innerText;
+        rows[i].style.display = (nameText.toLowerCase().includes(filter) || subjectText.toLowerCase().includes(filter)) ? '' : 'none';
+      }
+    }
+  }
+</script>
+
+<%- include('../partials/admin_bottom', { flash: flash }) %>

@@ -1,0 +1,133 @@
+<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole }) %>
+<div class="container pb-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px;">
+        <i class="bi bi-file-earmark-check-fill fs-4"></i>
+      </div>
+      <div>
+        <h2 class="fw-bold mb-0">إدارة الشيتات</h2>
+        <p class="text-muted small mb-0">رفع وتنظيم ملفات الشيتات والأسئلة التدريبية</p>
+      </div>
+    </div>
+    <a href="/admin" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-arrow-right me-1"></i> لوحة التحكم
+    </a>
+  </div>
+
+  <div class="card p-4 border-0 shadow-sm mb-5">
+    <h5 class="fw-bold mb-4 text-success"><i class="bi bi-file-earmark-plus me-2"></i>رفع شيت جديد</h5>
+
+    <form action="/admin/sheets/add" method="post" enctype="multipart/form-data">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">عنوان الشيت</label>
+          <input type="text" name="sheet_name" class="form-control" placeholder="مثال: شيت الأسبوع الأول">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">الدكتور المسؤول</label>
+          <select name="professor_id" class="form-select">
+            <option value="">اختر دكتور...</option>
+            <% professors.forEach((professor) => { %>
+            <option value="<%= professor.professor_id %>"><%= professor.professor_name %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-1">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">تاريخ الشيت (اختياري)</label>
+          <input type="date" name="sheet_date" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">ملف الشيت (PDF / DOCX)</label>
+          <input type="file" name="sheet_file" class="form-control" accept=".pdf,.docx">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn btn-success text-white fw-bold px-5 rounded-pill shadow-sm">رفع الشيت</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="row align-items-center mb-4 g-3">
+    <div class="col-md-6">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-files text-success"></i>
+        <h5 class="fw-bold mb-0">الشيتات المسجلة حالياً</h5>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
+        <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" id="sheetSearch" class="form-control border-0 py-2 small" placeholder="ابحث باسم الشيت أو الدكتور..." onkeyup="filterSheets()">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>اسم الشيت</th>
+          <th>الدكتور</th>
+          <th>التاريخ</th>
+          <th class="text-center">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% sheets.forEach((sheet) => { %>
+        <tr class="shadow-sm">
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-file-earmark-check-fill text-success fs-5"></i>
+              <a class="fw-bold text-main text-decoration-none" href="/<%= sheet.sheet_file %>" target="_blank"><%= sheet.sheet_name %></a>
+            </div>
+          </td>
+          <td><span class="text-muted small fw-bold"><i class="bi bi-person-badge-fill small me-1"></i><%= sheet.professor_name %></span></td>
+          <td><span class="badge status-badge"><%= sheet.sheet_date %></span></td>
+          <td class="text-center">
+            <% if (isSuperAdmin) { %>
+            <form action="/admin/sheets/delete/<%= sheet.sheet_id %>" method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا الشيت نهائياً؟');">
+              <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash-fill fs-5"></i></button>
+            </form>
+            <% } else { %>
+            <span class="text-muted small">عرض فقط</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if (!sheets.length) { %>
+  <div class="text-center py-5 opacity-50">
+    <i class="bi bi-file-earmark-x fa-3x d-block mb-3"></i>
+    <h6>لا يوجد شيتات مضافة حالياً</h6>
+  </div>
+  <% } %>
+</div>
+
+<script>
+  function filterSheets() {
+    const input = document.getElementById('sheetSearch');
+    const filter = input.value.toLowerCase();
+    const table = document.querySelector('.table');
+    const rows = table.getElementsByTagName('tr');
+
+    for (let i = 1; i < rows.length; i += 1) {
+      const nameCol = rows[i].getElementsByTagName('td')[0];
+      const profCol = rows[i].getElementsByTagName('td')[1];
+      if (nameCol && profCol) {
+        const nameText = nameCol.textContent || nameCol.innerText;
+        const profText = profCol.textContent || profCol.innerText;
+        rows[i].style.display = (nameText.toLowerCase().includes(filter) || profText.toLowerCase().includes(filter)) ? '' : 'none';
+      }
+    }
+  }
+</script>
+
+<%- include('../partials/admin_bottom', { flash: flash }) %>

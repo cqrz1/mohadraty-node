@@ -1,0 +1,148 @@
+﻿<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole }) %>
+<div class="container pb-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px;">
+        <i class="bi bi-person-gear fs-4"></i>
+      </div>
+      <div>
+        <h2 class="fw-bold mb-0">إدارة المسؤولين</h2>
+        <p class="text-muted small mb-0">إضافة وعرض وتعديل حسابات المسؤولين حسب الصلاحيات</p>
+      </div>
+    </div>
+    <a href="/admin" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-arrow-right me-1"></i> لوحة التحكم
+    </a>
+  </div>
+
+  <div class="card p-4 border-0 shadow-sm mb-5">
+    <h5 class="fw-bold mb-4 text-primary">
+      <i class="bi <%= editAdmin ? 'bi-pencil-square' : 'bi-person-plus' %> me-2"></i>
+      <%= editAdmin ? 'تعديل مسؤول' : 'إضافة مسؤول جديد' %>
+    </h5>
+
+    <form action="<%= editAdmin ? ('/admin/admins/update/' + editAdmin.admin_id) : '/admin/admins/add' %>" method="post">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label small fw-bold">كود المسؤول (ID)</label>
+          <input type="text" name="admin_id" class="form-control" value="<%= editAdmin ? editAdmin.admin_id : '' %>" placeholder="مثال: 3001">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold">اسم المستخدم</label>
+          <input type="text" name="admin_name" class="form-control" value="<%= editAdmin ? editAdmin.admin_name : '' %>" placeholder="اسم المسؤول">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label small fw-bold">الدور</label>
+          <% if (isSuperAdmin) { %>
+          <select name="role" class="form-select">
+            <option value="admin" <%= editAdmin && editAdmin.role === 'admin' ? 'selected' : '' %>>admin</option>
+            <option value="superadmin" <%= editAdmin && editAdmin.role === 'superadmin' ? 'selected' : '' %>>superadmin</option>
+          </select>
+          <% } else { %>
+          <input type="hidden" name="role" value="admin">
+          <input type="text" class="form-control" value="admin" disabled>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary text-white fw-bold px-5 rounded-pill shadow-sm">
+          <%= editAdmin ? 'حفظ التعديلات' : 'إضافة المسؤول' %>
+        </button>
+        <% if (editAdmin) { %>
+        <a href="/admin/admins" class="btn btn-outline-secondary rounded-pill px-4">إلغاء التعديل</a>
+        <% } %>
+      </div>
+
+      <% if (!isSuperAdmin) { %>
+      <p class="small text-muted mt-3 mb-0">يمكنك إضافة حسابات جديدة بدور <code>admin</code> فقط.</p>
+      <% } %>
+    </form>
+  </div>
+
+  <div class="row align-items-center mb-4 g-3">
+    <div class="col-md-6">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-list-ul text-primary"></i>
+        <h5 class="fw-bold mb-0">قائمة المسؤولين</h5>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
+        <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" id="adminsSearch" class="form-control border-0 py-2 small" placeholder="ابحث بالاسم أو الكود..." onkeyup="filterAdmins()">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>الكود</th>
+          <th>الاسم</th>
+          <th>الدور</th>
+          <th class="text-center">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% admins.forEach((admin) => { %>
+        <tr class="shadow-sm">
+          <td><span class="badge status-badge font-monospace"><%= admin.admin_id %></span></td>
+          <td><span class="fw-bold"><%= admin.admin_name %></span></td>
+          <td>
+            <% if (admin.role === 'superadmin') { %>
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">superadmin</span>
+            <% } else { %>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">admin</span>
+            <% } %>
+          </td>
+          <td class="text-center">
+            <% if (isSuperAdmin) { %>
+            <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+              <a class="btn btn-warning btn-sm text-white px-3" href="/admin/admins?editId=<%= admin.admin_id %>"><i class="bi bi-pencil-square"></i></a>
+              <% if (admin.admin_id !== adminId && admin.role !== 'superadmin') { %>
+              <form action="/admin/admins/delete/<%= admin.admin_id %>" method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا المسؤول نهائيًا؟');">
+                <button type="submit" class="btn btn-outline-danger btn-sm px-3"><i class="bi bi-trash"></i></button>
+              </form>
+              <% } %>
+            </div>
+            <% } else { %>
+            <span class="text-muted small">عرض فقط</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if (!admins.length) { %>
+  <div class="text-center py-5 opacity-50">
+    <i class="bi bi-person-x fs-1 d-block mb-3"></i>
+    <h6>لا يوجد مسؤولون مسجلون حاليًا</h6>
+  </div>
+  <% } %>
+</div>
+
+<script>
+  function filterAdmins() {
+    const input = document.getElementById('adminsSearch');
+    const filter = input.value.toLowerCase();
+    const table = document.querySelector('.table');
+    const rows = table.getElementsByTagName('tr');
+
+    for (let i = 1; i < rows.length; i += 1) {
+      const idCol = rows[i].getElementsByTagName('td')[0];
+      const nameCol = rows[i].getElementsByTagName('td')[1];
+      if (idCol && nameCol) {
+        const idText = idCol.textContent || idCol.innerText;
+        const nameText = nameCol.textContent || nameCol.innerText;
+        rows[i].style.display = (idText.toLowerCase().includes(filter) || nameText.toLowerCase().includes(filter)) ? '' : 'none';
+      }
+    }
+  }
+</script>
+
+<%- include('../partials/admin_bottom', { flash: flash }) %>

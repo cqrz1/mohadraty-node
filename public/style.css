@@ -1,0 +1,222 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+
+:root {
+  --primary: #d62839;
+  --primary-soft: #ffeff1;
+  --primary-gradient: linear-gradient(135deg, #ef476f 0%, #d62839 100%);
+  --secondary: #f77f00;
+  --bg-main: #f6f8fb;
+  --bg-card: #ffffff;
+  --text-main: #152238;
+  --text-muted: #5f6f85;
+  --border-color: #e6ebf2;
+  --shadow-sm: 0 2px 8px rgba(20, 35, 60, 0.08);
+  --shadow-lg: 0 18px 35px rgba(20, 35, 60, 0.14);
+  --radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  background: var(--bg-main);
+  color: var(--text-main);
+  margin: 0;
+  min-height: 100vh;
+  padding-top: 88px;
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.11;
+  z-index: -1;
+}
+
+body::before {
+  top: -120px;
+  left: -120px;
+  background: #ef476f;
+}
+
+body::after {
+  bottom: -140px;
+  right: -140px;
+  background: #f77f00;
+}
+
+.navbar {
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-color);
+  padding: 14px 0;
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--primary) !important;
+}
+
+.card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-main);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.professor-card {
+  overflow: hidden;
+}
+
+.professor-card .card-img-top {
+  transition: transform 0.3s ease;
+}
+
+.professor-card:hover .card-img-top {
+  transform: scale(1.06);
+}
+
+.action-card {
+  border-top: 4px solid var(--primary) !important;
+}
+
+.btn-primary {
+  background: var(--primary-gradient) !important;
+  border: 0 !important;
+  color: #fff !important;
+}
+
+.btn-primary:hover {
+  filter: brightness(0.97);
+}
+
+.form-control,
+.form-select {
+  background: #fff !important;
+  border: 1.5px solid var(--border-color) !important;
+  color: var(--text-main) !important;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #f0a6ad !important;
+  box-shadow: 0 0 0 0.18rem rgba(214, 40, 57, 0.15) !important;
+}
+
+.login-container {
+  padding: 1.6rem 2.4rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96) !important;
+}
+
+.login-icon-box {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.4rem;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border: 1px solid #ffdce1;
+}
+
+.login-icon-box i {
+  font-size: 2.1rem;
+}
+
+.dashboard-header {
+  background: var(--primary-gradient);
+  border-radius: var(--radius);
+  padding: 34px;
+  color: #fff;
+  margin-bottom: 30px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-header::before {
+  content: '';
+  position: absolute;
+  top: -24%;
+  right: -7%;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.footer {
+  background: #fff !important;
+  border-top: 1px solid var(--border-color);
+}
+
+.status-badge {
+  background: #fff7f8 !important;
+  color: var(--primary) !important;
+  border: 1px solid #ffd6db;
+}
+
+.text-main {
+  color: var(--text-main) !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.text-primary {
+  color: var(--primary) !important;
+}
+
+.gradient-text {
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.shadow-sm {
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.badge {
+  font-weight: 600;
+}
+
+@media (max-width: 767.98px) {
+  body {
+    padding-top: 78px;
+  }
+
+  .dashboard-header {
+    padding: 24px;
+  }
+
+  .login-container {
+    padding: 1.4rem 1.2rem;
+  }
+}

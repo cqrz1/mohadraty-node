@@ -1,0 +1,149 @@
+<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole }) %>
+<div class="container pb-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 50px; height: 50px;">
+        <i class="bi bi-people-fill fs-4"></i>
+      </div>
+      <div>
+        <h2 class="fw-bold mb-0">إدارة الطلاب</h2>
+        <p class="text-muted small mb-0">إدارة سجلات الطلاب والبيانات الشخصية</p>
+      </div>
+    </div>
+    <a href="/admin" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-arrow-right me-1"></i> لوحة التحكم
+    </a>
+  </div>
+
+  <div class="card p-4 border-0 shadow-sm mb-5">
+    <h5 class="fw-bold mb-4 text-warning">
+      <i class="bi bi-plus-circle-dotted me-2"></i>إضافة / تعديل طالب
+    </h5>
+
+    <form action="/admin/students/save" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="edit_id" value="<%= editStudent ? editStudent.student_id : '' %>">
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">كود الكارنيه (ID)</label>
+          <input type="text" name="student_id" class="form-control" placeholder="مثال: 2024001" value="<%= editStudent ? editStudent.student_id : '' %>">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">الاسم الرباعي</label>
+          <input type="text" name="student_name" class="form-control" placeholder="الاسم كما في الكارنيه" value="<%= editStudent ? editStudent.student_name : '' %>">
+        </div>
+      </div>
+
+      <div class="row g-3 mt-1">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">الفرقة الدراسية</label>
+          <select name="academic_year" class="form-select">
+            <% formOptions.years.forEach((year) => { %>
+            <option value="<%= year %>" <%= editStudent && editStudent.academic_year === year ? 'selected' : '' %>><%= year %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">التخصص / القسم</label>
+          <select name="major" class="form-select">
+            <% formOptions.majors.forEach((major) => { %>
+            <option value="<%= major %>" <%= editStudent && editStudent.major === major ? 'selected' : '' %>><%= major %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label small fw-bold">صورة الطالب الشخصية</label>
+        <input type="file" name="student_photo" class="form-control" accept=".jpg,.jpeg,.png">
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-warning text-white fw-bold px-5 rounded-pill shadow-sm"><%= editStudent ? 'حفظ التعديلات' : 'حفظ البيانات' %></button>
+        <% if (editStudent) { %>
+        <a href="/admin/students" class="btn btn-outline-secondary rounded-pill px-4">إلغاء التعديل</a>
+        <% } %>
+      </div>
+    </form>
+  </div>
+
+  <div class="row align-items-center mb-4 g-3">
+    <div class="col-md-6">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-list-ul text-primary"></i>
+        <h5 class="fw-bold mb-0">قائمة الطلاب المسجلين</h5>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
+        <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" id="studentSearch" class="form-control border-0 py-2 small" placeholder="ابحث بالاسم أو كود الطالب..." onkeyup="filterStudents()">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>الطالب</th>
+          <th>الكود</th>
+          <th>السنة</th>
+          <th>التخصص</th>
+          <th class="text-center">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% students.forEach((student) => { %>
+        <tr class="shadow-sm">
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <img src="<%= student.student_photo %>" alt="Student" class="rounded-pill shadow-sm" style="width:45px;height:45px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/45?text=S'">
+              <span class="fw-bold"><%= student.student_name %></span>
+            </div>
+          </td>
+          <td><span class="badge status-badge font-monospace"><%= student.student_id %></span></td>
+          <td><%= student.academic_year %></td>
+          <td><%= student.major %></td>
+          <td class="text-center">
+            <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+              <a class="btn btn-warning btn-sm text-white px-3" href="/admin/students?editId=<%= student.student_id %>"><i class="bi bi-pencil-square"></i></a>
+              <form action="/admin/students/delete/<%= student.student_id %>" method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا الطالب نهائياً؟');">
+                <button type="submit" class="btn btn-outline-danger btn-sm px-3"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if (!students.length) { %>
+  <div class="text-center py-5 opacity-50">
+    <i class="bi bi-person-x fa-3x d-block mb-3"></i>
+    <h6>لا يوجد طلاب مسجلين في النظام حالياً</h6>
+  </div>
+  <% } %>
+</div>
+
+<script>
+  function filterStudents() {
+    const input = document.getElementById('studentSearch');
+    const filter = input.value.toLowerCase();
+    const table = document.querySelector('.table');
+    const rows = table.getElementsByTagName('tr');
+
+    for (let i = 1; i < rows.length; i += 1) {
+      const nameCol = rows[i].getElementsByTagName('td')[0];
+      const idCol = rows[i].getElementsByTagName('td')[1];
+      if (nameCol && idCol) {
+        const nameText = nameCol.textContent || nameCol.innerText;
+        const idText = idCol.textContent || idCol.innerText;
+        rows[i].style.display = (nameText.toLowerCase().includes(filter) || idText.toLowerCase().includes(filter)) ? '' : 'none';
+      }
+    }
+  }
+</script>
+
+<%- include('../partials/admin_bottom', { flash: flash }) %>

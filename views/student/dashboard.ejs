@@ -1,0 +1,68 @@
+<%- include('../partials/student_top', { title: title }) %>
+<div class="container pb-5">
+  <div class="dashboard-header">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h1 class="display-5 fw-extrabold mb-2" style="font-weight: 800;">أهلاً بك في محاضراتي</h1>
+        <p class="lead mb-0 opacity-75">استكشف المواد التعليمية وتابع محاضراتك ودروسك بكل سهولة ويسر.</p>
+      </div>
+      <div class="col-md-4 text-center d-none d-md-block">
+        <i class="bi bi-rocket-takeoff text-white opacity-25" style="font-size: 8rem;"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="row align-items-center mb-4 mt-3">
+    <div class="col-md-6">
+      <div class="d-flex align-items-center gap-3">
+        <div class="bg-primary bg-opacity-10 text-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+          <i class="bi bi-grid-fill fs-2"></i>
+        </div>
+        <div>
+          <h4 class="fw-bold mb-0">هيئة التدريس والمواد</h4>
+          <p class="text-muted small mb-0">تصفح المحتوى التعليمي لكل مادة</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 text-md-start text-end mt-3 mt-md-0">
+      <span class="badge status-badge rounded-pill px-3 py-2 shadow-sm">الطالب: <%= studentName %></span>
+    </div>
+  </div>
+
+  <% if (message) { %>
+  <div class="alert alert-danger mb-4 d-block rounded-4 shadow-sm"><%= message %></div>
+  <% } %>
+
+  <div class="row g-4">
+    <% professors.forEach((professor) => { %>
+    <div class="col-lg-4 col-md-6">
+      <div class="card professor-card h-100 border-0 shadow-sm">
+        <div class="position-relative overflow-hidden" style="height: 280px;">
+          <img src="<%= professor.professor_photo %>" class="card-img-top w-100 h-100" alt="صورة الدكتور" style="object-fit: cover;" onerror="this.src='https://via.placeholder.com/400x300?text=محاضراتي'">
+          <div class="position-absolute top-0 start-0 m-3">
+            <span class="badge status-badge rounded-pill px-3 py-2 shadow-sm fw-bold">
+              <i class="bi bi-bookmark-fill me-1"></i><%= professor.subject_name %>
+            </span>
+          </div>
+          <div class="position-absolute bottom-0 start-0 end-0 p-3" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+            <h5 class="text-white fw-bold mb-0"><%= professor.professor_name %></h5>
+          </div>
+        </div>
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3">
+            <p class="text-muted small mb-0"><i class="bi bi-mortarboard me-1"></i> مسئول عن مادة:</p>
+            <div class="fw-bold text-primary"><%= professor.subject_name %></div>
+          </div>
+          <form action="/professor/select" method="post" class="mt-auto">
+            <input type="hidden" name="professor_id" value="<%= professor.professor_id %>">
+            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 shadow-sm">
+              <i class="bi bi-box-arrow-in-left me-2"></i>عرض الملفات التعليمية
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+</div>
+<%- include('../partials/student_bottom') %>
