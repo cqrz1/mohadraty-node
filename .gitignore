@@ -9,3 +9,11 @@ coverage/
 dist/
 tmp/
 Thumbs.db
+
+# Keep only safe sample assets in git, ignore runtime uploads
+ProfessorsImages/*
+!ProfessorsImages/default.png
+uploads/lectures/*
+!uploads/lectures/sample-lecture.pdf
+uploads/sheets/*
+!uploads/sheets/sample-sheet.pdf

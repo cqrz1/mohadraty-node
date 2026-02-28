@@ -2,6 +2,10 @@
 
 Migrated educational portal from ASP.NET Web Forms to Node.js with server-rendered EJS views, SQL Server backend, file uploads, and admin RBAC.
 
+## Creators
+- cqrz`
+- voltex
+
 ## نظرة سريعة
 - بوابة تعليمية بواجهة عربية RTL.
 - تسجيل دخول طلاب وإدارة بنفس منطق المشروع الأصلي.
