@@ -31,6 +31,9 @@ Migrated educational portal from ASP.NET Web Forms to Node.js with server-render
   - Lectures: `.pdf/.ppt/.pptx`
   - Sheets: `.pdf/.docx`
 - Cleanup files when related DB records are deleted.
+- Admin pages support server-side search + pagination.
+- CSRF protection, security headers (`helmet`), and rate limiting for login/security-sensitive flows.
+- Admin audit logging for create/update/delete operations.
 
 ## Admin RBAC
 - Roles are stored in `admins.role`:

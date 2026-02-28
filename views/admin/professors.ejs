@@ -1,4 +1,4 @@
-﻿<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole }) %>
+<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole, adminRoleLabel: adminRoleLabel }) %>
 <div class="container pb-5">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="d-flex align-items-center gap-3">
@@ -22,6 +22,7 @@
     </h5>
 
     <form action="/admin/professors/save" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="edit_id" value="<%= editProfessor ? editProfessor.professor_id : '' %>">
 
       <div class="row g-3">
@@ -36,21 +37,33 @@
       </div>
 
       <div class="row g-3 mt-1">
-        <div class="col-md-6">
-          <label class="form-label small fw-bold">الفرقة الدراسية</label>
-          <select name="academic_year" class="form-select">
-            <% formOptions.years.forEach((year) => { %>
-            <option value="<%= year %>" <%= editProfessor && editProfessor.academic_year === year ? 'selected' : '' %>><%= year %></option>
+        <div class="col-12">
+          <label class="form-label small fw-bold">التوزيع الدراسي (تخصص + فرقة)</label>
+          <% const selectedTeachingPairs = (editProfessor && editProfessor.teaching_scope_pairs) ? editProfessor.teaching_scope_pairs : []; %>
+          <div class="teaching-scope-panel border rounded-3 p-3 bg-light-subtle">
+            <% formOptions.majors.forEach((major, majorIndex) => { %>
+            <div class="teaching-scope-row <%= majorIndex === formOptions.majors.length - 1 ? '' : 'mb-3 pb-3 border-bottom' %>">
+              <div class="teaching-scope-major"><%= major %></div>
+              <div class="teaching-scope-years">
+                <% formOptions.years.forEach((year, yearIndex) => { %>
+                <% const pairValue = `${year}||${major}`; %>
+                <label class="teaching-scope-chip" for="teaching_scope_<%= majorIndex %>_<%= yearIndex %>">
+                  <input
+                    class="teaching-scope-input"
+                    type="checkbox"
+                    name="teaching_scope"
+                    id="teaching_scope_<%= majorIndex %>_<%= yearIndex %>"
+                    value="<%= pairValue %>"
+                    <%= selectedTeachingPairs.includes(pairValue) ? 'checked' : '' %>
+                  >
+                  <span class="teaching-scope-text"><%= year %></span>
+                </label>
+                <% }) %>
+              </div>
+            </div>
             <% }) %>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label small fw-bold">التخصص</label>
-          <select name="major" class="form-select">
-            <% formOptions.majors.forEach((major) => { %>
-            <option value="<%= major %>" <%= editProfessor && editProfessor.major === major ? 'selected' : '' %>><%= major %></option>
-            <% }) %>
-          </select>
+          </div>
+          <small class="text-muted">اختر التركيبات المطلوبة فقط، مثال: نظم أول + نظم ثاني + محاسبة رابع.</small>
         </div>
       </div>
 
@@ -69,17 +82,25 @@
   </div>
 
   <div class="row align-items-center mb-4 g-3">
-    <div class="col-md-6">
+    <div class="col-md-5">
       <div class="d-flex align-items-center gap-2">
         <i class="bi bi-people text-primary"></i>
         <h5 class="fw-bold mb-0">هيئة التدريس المسجلة</h5>
       </div>
     </div>
-    <div class="col-md-6">
-      <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
-        <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
-        <input type="text" id="profSearch" class="form-control border-0 py-2 small" placeholder="ابحث باسم الدكتور أو المادة..." onkeyup="filterProfessors()">
-      </div>
+    <div class="col-md-7">
+      <form method="get" action="/admin/professors" class="d-flex gap-2 align-items-center">
+        <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
+          <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" name="q" class="form-control border-0 py-2 small" placeholder="ابحث باسم الدكتور أو المادة..." value="<%= searchTerm || '' %>">
+        </div>
+        <select name="page_size" class="form-select form-select-sm w-auto rounded-pill px-3">
+          <% pageSizeOptions.forEach((size) => { %>
+          <option value="<%= size %>" <%= pagination && pagination.pageSize === size ? 'selected' : '' %>><%= size %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-outline-primary rounded-pill px-3">بحث</button>
+      </form>
     </div>
   </div>
 
@@ -106,13 +127,17 @@
           <td>
             <p class="mb-0 small fw-bold"><%= professor.academic_year %></p>
             <p class="mb-0 text-muted extra-small"><%= professor.major %></p>
+            <% if (professor.teaching_scope_text) { %>
+            <p class="mb-0 text-muted extra-small"><%= professor.teaching_scope_text %></p>
+            <% } %>
           </td>
           <td class="text-center">
             <div class="btn-group shadow-sm rounded-pill overflow-hidden">
               <a class="btn btn-warning btn-sm text-white px-3" href="/admin/professors?editId=<%= professor.professor_id %>"><i class="bi bi-pencil-square"></i></a>
-              <% if (isSuperAdmin) { %>
-              <form action="/admin/professors/delete/<%= professor.professor_id %>" method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا الدكتور وجميع مرفقاته؟');">
-                <button type="submit" class="btn btn-outline-danger btn-sm px-3"><i class="bi bi-trash"></i></button>
+              <% if (canDeleteContent) { %>
+              <form action="/admin/professors/delete/<%= professor.professor_id %>" method="post" data-confirm="هل أنت متأكد من حذف هذا الدكتور وجميع مرفقاته؟">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="btn btn-delete-soft btn-sm px-3"><i class="bi bi-trash3-fill"></i></button>
               </form>
               <% } %>
             </div>
@@ -129,25 +154,13 @@
     <h6>لا يوجد دكاترة مسجلون حاليًا</h6>
   </div>
   <% } %>
+
+  <%- include('../partials/admin_pagination', {
+    pagination: pagination,
+    searchTerm: searchTerm,
+    basePath: '/admin/professors'
+  }) %>
 </div>
 
-<script>
-  function filterProfessors() {
-    const input = document.getElementById('profSearch');
-    const filter = input.value.toLowerCase();
-    const table = document.querySelector('.table');
-    const rows = table.getElementsByTagName('tr');
-
-    for (let i = 1; i < rows.length; i += 1) {
-      const nameCol = rows[i].getElementsByTagName('td')[0];
-      const subjectCol = rows[i].getElementsByTagName('td')[1];
-      if (nameCol && subjectCol) {
-        const nameText = nameCol.textContent || nameCol.innerText;
-        const subjectText = subjectCol.textContent || subjectCol.innerText;
-        rows[i].style.display = (nameText.toLowerCase().includes(filter) || subjectText.toLowerCase().includes(filter)) ? '' : 'none';
-      }
-    }
-  }
-</script>
-
 <%- include('../partials/admin_bottom', { flash: flash }) %>
+

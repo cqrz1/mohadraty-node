@@ -1,4 +1,4 @@
-﻿<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole }) %>
+<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole, adminRoleLabel: adminRoleLabel }) %>
 <div class="container pb-5">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="d-flex align-items-center gap-3">
@@ -16,35 +16,31 @@
   </div>
 
   <div class="card p-4 border-0 shadow-sm mb-5">
+    <% if (canManageAdmins) { %>
     <h5 class="fw-bold mb-4 text-primary">
       <i class="bi <%= editAdmin ? 'bi-pencil-square' : 'bi-person-plus' %> me-2"></i>
       <%= editAdmin ? 'تعديل مسؤول' : 'إضافة مسؤول جديد' %>
     </h5>
 
     <form action="<%= editAdmin ? ('/admin/admins/update/' + editAdmin.admin_id) : '/admin/admins/add' %>" method="post">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label small fw-bold">كود المسؤول (ID)</label>
-          <input type="text" name="admin_id" class="form-control" value="<%= editAdmin ? editAdmin.admin_id : '' %>" placeholder="مثال: 3001">
-        </div>
         <div class="col-md-4">
           <label class="form-label small fw-bold">اسم المستخدم</label>
           <input type="text" name="admin_name" class="form-control" value="<%= editAdmin ? editAdmin.admin_name : '' %>" placeholder="اسم المسؤول">
         </div>
-
         <div class="col-md-4">
           <label class="form-label small fw-bold">الدور</label>
-          <% if (isSuperAdmin) { %>
+          <% const selectedRole = (editAdmin && editAdmin.role) || ((assignableRoles && assignableRoles[0]) || 'admin'); %>
+          <% const roleDisplay = { owner: 'المالك', assistant_owner: 'مساعد المالك', manager: 'مدير', admin: 'مسؤول' }; %>
           <select name="role" class="form-select">
-            <option value="admin" <%= editAdmin && editAdmin.role === 'admin' ? 'selected' : '' %>>admin</option>
-            <option value="superadmin" <%= editAdmin && editAdmin.role === 'superadmin' ? 'selected' : '' %>>superadmin</option>
+            <% (assignableRoles || []).forEach((roleKey) => { %>
+            <option value="<%= roleKey %>" <%= selectedRole === roleKey ? 'selected' : '' %>><%= roleDisplay[roleKey] || roleKey %></option>
+            <% }) %>
           </select>
-          <% } else { %>
-          <input type="hidden" name="role" value="admin">
-          <input type="text" class="form-control" value="admin" disabled>
-          <% } %>
         </div>
       </div>
+      <p class="text-muted small mt-3 mb-0">كود المسؤول (ID) يُولّد تلقائيًا من قاعدة البيانات ولا يمكن تعديله من الموقع.</p>
 
       <div class="mt-4 d-flex gap-2">
         <button type="submit" class="btn btn-primary text-white fw-bold px-5 rounded-pill shadow-sm">
@@ -54,27 +50,42 @@
         <a href="/admin/admins" class="btn btn-outline-secondary rounded-pill px-4">إلغاء التعديل</a>
         <% } %>
       </div>
-
-      <% if (!isSuperAdmin) { %>
-      <p class="small text-muted mt-3 mb-0">يمكنك إضافة حسابات جديدة بدور <code>admin</code> فقط.</p>
-      <% } %>
     </form>
+    <% } else { %>
+    <h5 class="fw-bold mb-2 text-primary"><i class="bi bi-eye me-2"></i>عرض المسؤولين</h5>
+    <p class="text-muted mb-0">ليس لديك صلاحية إضافة أو تعديل أو حذف حسابات المسؤولين.</p>
+    <% } %>
   </div>
 
   <div class="row align-items-center mb-4 g-3">
-    <div class="col-md-6">
+    <div class="col-md-5">
       <div class="d-flex align-items-center gap-2">
         <i class="bi bi-list-ul text-primary"></i>
         <h5 class="fw-bold mb-0">قائمة المسؤولين</h5>
       </div>
     </div>
-    <div class="col-md-6">
-      <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
-        <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
-        <input type="text" id="adminsSearch" class="form-control border-0 py-2 small" placeholder="ابحث بالاسم أو الكود..." onkeyup="filterAdmins()">
-      </div>
+    <div class="col-md-7">
+      <form method="get" action="/admin/admins" class="d-flex gap-2 align-items-center">
+        <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
+          <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" name="q" class="form-control border-0 py-2 small" placeholder="ابحث بالاسم أو الكود..." value="<%= searchTerm || '' %>">
+        </div>
+        <select name="page_size" class="form-select form-select-sm w-auto rounded-pill px-3">
+          <% pageSizeOptions.forEach((size) => { %>
+          <option value="<%= size %>" <%= pagination && pagination.pageSize === size ? 'selected' : '' %>><%= size %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-outline-primary rounded-pill px-3">بحث</button>
+      </form>
     </div>
   </div>
+
+  <% const roleBadgeClasses = {
+    owner: 'bg-danger-subtle text-danger border border-danger-subtle',
+    assistant_owner: 'bg-warning-subtle text-warning border border-warning-subtle',
+    manager: 'bg-info-subtle text-info border border-info-subtle',
+    admin: 'bg-primary-subtle text-primary border border-primary-subtle'
+  }; %>
 
   <div class="table-responsive">
     <table class="table align-middle">
@@ -92,19 +103,18 @@
           <td><span class="badge status-badge font-monospace"><%= admin.admin_id %></span></td>
           <td><span class="fw-bold"><%= admin.admin_name %></span></td>
           <td>
-            <% if (admin.role === 'superadmin') { %>
-            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">superadmin</span>
-            <% } else { %>
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">admin</span>
-            <% } %>
+            <span class="badge rounded-pill <%= roleBadgeClasses[admin.role] || roleBadgeClasses.admin %>"><%= admin.roleLabel || admin.role %></span>
           </td>
           <td class="text-center">
-            <% if (isSuperAdmin) { %>
+            <% if (admin.canEdit || admin.canDelete) { %>
             <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+              <% if (admin.canEdit) { %>
               <a class="btn btn-warning btn-sm text-white px-3" href="/admin/admins?editId=<%= admin.admin_id %>"><i class="bi bi-pencil-square"></i></a>
-              <% if (admin.admin_id !== adminId && admin.role !== 'superadmin') { %>
-              <form action="/admin/admins/delete/<%= admin.admin_id %>" method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا المسؤول نهائيًا؟');">
-                <button type="submit" class="btn btn-outline-danger btn-sm px-3"><i class="bi bi-trash"></i></button>
+              <% } %>
+              <% if (admin.canDelete) { %>
+              <form action="/admin/admins/delete/<%= admin.admin_id %>" method="post" data-confirm="هل أنت متأكد من حذف هذا المسؤول نهائيًا؟">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="btn btn-delete-soft btn-sm px-3"><i class="bi bi-trash3-fill"></i></button>
               </form>
               <% } %>
             </div>
@@ -124,25 +134,12 @@
     <h6>لا يوجد مسؤولون مسجلون حاليًا</h6>
   </div>
   <% } %>
+
+  <%- include('../partials/admin_pagination', {
+    pagination: pagination,
+    searchTerm: searchTerm,
+    basePath: '/admin/admins'
+  }) %>
 </div>
-
-<script>
-  function filterAdmins() {
-    const input = document.getElementById('adminsSearch');
-    const filter = input.value.toLowerCase();
-    const table = document.querySelector('.table');
-    const rows = table.getElementsByTagName('tr');
-
-    for (let i = 1; i < rows.length; i += 1) {
-      const idCol = rows[i].getElementsByTagName('td')[0];
-      const nameCol = rows[i].getElementsByTagName('td')[1];
-      if (idCol && nameCol) {
-        const idText = idCol.textContent || idCol.innerText;
-        const nameText = nameCol.textContent || nameCol.innerText;
-        rows[i].style.display = (idText.toLowerCase().includes(filter) || nameText.toLowerCase().includes(filter)) ? '' : 'none';
-      }
-    }
-  }
-</script>
 
 <%- include('../partials/admin_bottom', { flash: flash }) %>

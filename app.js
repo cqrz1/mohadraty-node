@@ -6,6 +6,7 @@ require('dotenv').config();
 const studentRoutes = require('./src/routes/student.routes');
 const adminRoutes = require('./src/routes/admin.routes');
 const { notFoundHandler, errorHandler } = require('./src/middlewares/errorHandler');
+const { securityHeaders, globalRateLimit, csrfErrorHandler } = require('./src/middlewares/security');
 
 function parseBoolean(value, fallback = false) {
   if (value === undefined || value === null || value === '') {
@@ -31,6 +32,9 @@ if (parseBoolean(process.env.TRUST_PROXY, false)) {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+app.use(securityHeaders);
+app.use(globalRateLimit);
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
@@ -46,6 +50,8 @@ app.use(
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
+    unset: 'destroy',
     cookie: {
       httpOnly: true,
       secure: parseBoolean(process.env.SESSION_SECURE, isProduction),
@@ -58,6 +64,13 @@ app.use(
 app.use((req, res, next) => {
   res.locals.currentPath = req.path;
   res.locals.session = req.session;
+  next();
+});
+
+app.use((req, res, next) => {
+  if (typeof res.locals.csrfToken === 'undefined') {
+    res.locals.csrfToken = '';
+  }
   next();
 });
 
@@ -86,6 +99,7 @@ app.get('/error', (req, res) => {
   });
 });
 
+app.use(csrfErrorHandler);
 app.use(notFoundHandler);
 app.use(errorHandler);
 

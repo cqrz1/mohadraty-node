@@ -8,14 +8,14 @@ const Admin = sequelize.define(
       type: DataTypes.INTEGER,
       primaryKey: true,
       allowNull: false,
-      autoIncrement: false
+      autoIncrement: true
     },
     admin_name: {
       type: DataTypes.STRING(50),
       allowNull: false
     },
     role: {
-      type: DataTypes.ENUM('superadmin', 'admin'),
+      type: DataTypes.ENUM('owner', 'assistant_owner', 'manager', 'admin'),
       allowNull: false,
       defaultValue: 'admin'
     }
@@ -78,15 +78,40 @@ const Professor = sequelize.define(
       allowNull: true
     },
     academic_year: {
-      type: DataTypes.STRING(50),
+      type: DataTypes.STRING(255),
       allowNull: true
     },
     major: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(255),
       allowNull: true
     }
   },
   { tableName: 'professors', timestamps: false }
+);
+
+const ProfessorTeachingScope = sequelize.define(
+  'professor_teaching_scopes',
+  {
+    scope_id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      allowNull: false,
+      autoIncrement: true
+    },
+    professor_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    academic_year: {
+      type: DataTypes.STRING(50),
+      allowNull: false
+    },
+    major: {
+      type: DataTypes.STRING(100),
+      allowNull: false
+    }
+  },
+  { tableName: 'professor_teaching_scopes', timestamps: false }
 );
 
 const Lecture = sequelize.define(
@@ -147,6 +172,52 @@ const Sheet = sequelize.define(
   { tableName: 'sheets', timestamps: false }
 );
 
+const AdminAuditLog = sequelize.define(
+  'admin_audit_logs',
+  {
+    log_id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      allowNull: false,
+      autoIncrement: true
+    },
+    actor_admin_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    action: {
+      type: DataTypes.STRING(100),
+      allowNull: false
+    },
+    target_type: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    target_id: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    details: {
+      type: DataTypes.STRING(1000),
+      allowNull: true
+    },
+    ip_address: {
+      type: DataTypes.STRING(64),
+      allowNull: true
+    },
+    user_agent: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal('GETDATE()')
+    }
+  },
+  { tableName: 'admin_audit_logs', timestamps: false }
+);
+
 Admin.hasMany(Student, { foreignKey: 'admin_id' });
 Student.belongsTo(Admin, { foreignKey: 'admin_id' });
 
@@ -156,11 +227,25 @@ Lecture.belongsTo(Professor, { foreignKey: 'professor_id' });
 Professor.hasMany(Sheet, { foreignKey: 'professor_id' });
 Sheet.belongsTo(Professor, { foreignKey: 'professor_id' });
 
+Professor.hasMany(ProfessorTeachingScope, {
+  foreignKey: 'professor_id',
+  as: 'teachingScopes'
+});
+ProfessorTeachingScope.belongsTo(Professor, {
+  foreignKey: 'professor_id',
+  as: 'professor'
+});
+
+Admin.hasMany(AdminAuditLog, { foreignKey: 'actor_admin_id' });
+AdminAuditLog.belongsTo(Admin, { foreignKey: 'actor_admin_id' });
+
 module.exports = {
   sequelize,
   Admin,
   Student,
   Professor,
+  ProfessorTeachingScope,
   Lecture,
-  Sheet
+  Sheet,
+  AdminAuditLog
 };

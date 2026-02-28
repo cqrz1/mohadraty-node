@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -21,7 +21,7 @@
           <i class="bi bi-list"></i>
         </button>
         <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2">
-          <%= adminRole === 'superadmin' ? 'مشرف عام' : 'مسؤول' %>
+          <%= adminRoleLabel || (adminRole === 'owner' ? 'المالك' : adminRole === 'assistant_owner' ? 'مساعد المالك' : adminRole === 'manager' ? 'مدير' : 'مسؤول') %>
         </span>
         <a href="/admin/logout" class="btn btn-danger border-2 rounded-pill px-3 fw-bold shadow-sm">خروج</a>
       </div>

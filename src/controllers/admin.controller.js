@@ -1,8 +1,17 @@
-﻿const adminService = require('../services/admin.service');
+const adminService = require('../services/admin.service');
 const { getFlash, setFlash } = require('../services/flash.service');
+const {
+  normalizeAdminRole,
+  canManageAdmins,
+  canManageTargetRole,
+  getAssignableRoles,
+  getRoleRank,
+  getRoleLabelAr
+} = require('../constants/adminRoles');
 
-const STUDENT_YEAR_OPTIONS = ['الفرقة الأولى', 'الفرقة الثانية', 'الفرقة الثالثة', 'الفرقة الرابعة'];
-const MAJOR_OPTIONS = ['نظم ومعلومات الأعمال', 'محاسبة ومراجعة'];
+const STUDENT_YEAR_OPTIONS = ['\u0627\u0644\u0641\u0631\u0642\u0629 \u0627\u0644\u0623\u0648\u0644\u0649', '\u0627\u0644\u0641\u0631\u0642\u0629 \u0627\u0644\u062b\u0627\u0646\u064a\u0629', '\u0627\u0644\u0641\u0631\u0642\u0629 \u0627\u0644\u062b\u0627\u0644\u062b\u0629', '\u0627\u0644\u0641\u0631\u0642\u0629 \u0627\u0644\u0631\u0627\u0628\u0639\u0629'];
+const MAJOR_OPTIONS = ['\u0646\u0638\u0645 \u0648\u0645\u0639\u0644\u0648\u0645\u0627\u062a \u0627\u0644\u0623\u0639\u0645\u0627\u0644', '\u0645\u062d\u0627\u0633\u0628\u0629 \u0648\u0645\u0631\u0627\u062c\u0639\u0629'];
+const PAGE_SIZE_OPTIONS = adminService.ALLOWED_PAGE_SIZES || [10, 20, 50];
 
 function regenerateSession(req) {
   return new Promise((resolve, reject) => {
@@ -36,23 +45,44 @@ function parsePositiveId(value) {
   return parsed;
 }
 
-function isSuperAdmin(req) {
-  return String(req.session.AdminRole || '').toLowerCase() === 'superadmin';
+function parseListOptions(query) {
+  const page = parsePositiveId(query.page) || 1;
+  const pageSize = parsePositiveId(query.page_size) || PAGE_SIZE_OPTIONS[0];
+  const search = String(query.q || '').trim();
+
+  return { page, pageSize, search };
+}
+
+function getActorContext(req) {
+  return {
+    adminId: req.session.AdminId,
+    role: normalizeAdminRole(req.session.AdminRole),
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent')
+  };
+}
+
+function getCurrentRole(req) {
+  return normalizeAdminRole(req.session.AdminRole || 'admin');
 }
 
 function adminViewData(req, activePath) {
+  const currentRole = getCurrentRole(req);
   return {
     adminId: req.session.AdminId,
     adminUsername: req.session.AdminUsername,
-    adminRole: req.session.AdminRole || 'admin',
-    isSuperAdmin: isSuperAdmin(req),
+    adminRole: currentRole,
+    adminRoleLabel: getRoleLabelAr(currentRole),
+    canManageAdmins: canManageAdmins(currentRole),
+    canDeleteContent: getRoleRank(currentRole) >= 2,
+    assignableRoles: getAssignableRoles(currentRole),
     activePath
   };
 }
 
 function renderAdminLogin(res, payload) {
   return res.render('admin/login', {
-    title: 'دخول الإدارة',
+    title: '\u062f\u062e\u0648\u0644 \u0627\u0644\u0625\u062f\u0627\u0631\u0629',
     message: payload.message || '',
     formData: payload.formData || { username: '', password: '' }
   });
@@ -76,14 +106,14 @@ async function postLogin(req, res, next) {
 
     if (!username || !passwordText) {
       return renderAdminLogin(res, {
-        message: 'من فضلك أدخل اسم المستخدم وكلمة المرور',
+        message: '\u0645\u0646 \u0641\u0636\u0644\u0643 \u0623\u062f\u062e\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
         formData: { username, password: '' }
       });
     }
 
     if (!/^\d+$/.test(passwordText)) {
       return renderAdminLogin(res, {
-        message: 'كلمة المرور غير صحيحة (يجب أن تكون أرقامًا)',
+        message: '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d\u0629 (\u064a\u062c\u0628 \u0623\u0646 \u062a\u0643\u0648\u0646 \u0623\u0631\u0642\u0627\u0645\u064b\u0627)',
         formData: { username, password: '' }
       });
     }
@@ -93,7 +123,7 @@ async function postLogin(req, res, next) {
 
     if (!admin || String(admin.admin_name).trim() !== username) {
       return renderAdminLogin(res, {
-        message: 'اسم المستخدم أو كلمة المرور غير صحيحة',
+        message: '\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d\u0629',
         formData: { username, password: '' }
       });
     }
@@ -101,7 +131,7 @@ async function postLogin(req, res, next) {
     await regenerateSession(req);
     req.session.AdminId = admin.admin_id;
     req.session.AdminUsername = admin.admin_name;
-    req.session.AdminRole = admin.role || 'admin';
+    req.session.AdminRole = normalizeAdminRole(admin.role || 'admin');
     delete req.session.StudentID;
     delete req.session.StudentName;
     delete req.session.StudentYear;
@@ -113,7 +143,7 @@ async function postLogin(req, res, next) {
   } catch (error) {
     if (!res.headersSent) {
       return renderAdminLogin(res, {
-        message: `حدث خطأ أثناء الاتصال بالخادم: ${error.message}`,
+        message: `\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0627\u0644\u062e\u0627\u062f\u0645: ${error.message}`,
         formData: {
           username: String(req.body.username || '').trim(),
           password: ''
@@ -129,7 +159,7 @@ async function getDashboard(req, res, next) {
     const stats = await adminService.getAdminStats();
 
     return res.render('admin/dashboard', {
-      title: 'لوحة تحكم المسؤول',
+      title: '\u0644\u0648\u062d\u0629 \u062a\u062d\u0643\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644',
       ...adminViewData(req, '/admin'),
       stats
     });
@@ -140,36 +170,69 @@ async function getDashboard(req, res, next) {
 
 async function getAdmins(req, res, next) {
   try {
-    const [admins, flash] = await Promise.all([
-      adminService.listAdmins(),
+    const currentRole = getCurrentRole(req);
+    const listOptions = parseListOptions(req.query);
+    const [adminsData, flash] = await Promise.all([
+      adminService.listAdmins(listOptions),
       Promise.resolve(getFlash(req))
     ]);
+    let viewFlash = flash;
+
+    const admins = (adminsData.rows || []).map((adminItem) => {
+      const normalizedRole = normalizeAdminRole(adminItem.role);
+      const canManageTarget = canManageTargetRole(currentRole, normalizedRole);
+
+      return {
+        ...adminItem,
+        role: normalizedRole,
+        roleLabel: getRoleLabelAr(normalizedRole),
+        canEdit: canManageTarget,
+        canDelete: canManageTarget && adminItem.admin_id !== req.session.AdminId
+      };
+    });
 
     let editAdmin = null;
     const editId = parsePositiveId(req.query.editId);
-    if (editId && isSuperAdmin(req)) {
-      editAdmin = await adminService.getAdminById(editId);
+    if (editId && canManageAdmins(currentRole)) {
+      const candidate = await adminService.getAdminById(editId);
+      if (candidate && canManageTargetRole(currentRole, normalizeAdminRole(candidate.role))) {
+        editAdmin = {
+          ...candidate,
+          role: normalizeAdminRole(candidate.role)
+        };
+      } else if (candidate) {
+        viewFlash = {
+          message: '\u063a\u064a\u0631 \u0645\u0635\u0631\u062d \u0644\u0643 \u0628\u062a\u0639\u062f\u064a\u0644 \u0647\u0630\u0627 \u0627\u0644\u062d\u0633\u0627\u0628.',
+          type: 'error'
+        };
+      }
     }
 
     return res.render('admin/admins', {
-      title: 'إدارة المسؤولين',
+      title: '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u064a\u0646',
       ...adminViewData(req, '/admin/admins'),
       admins,
+      pagination: adminsData.pagination,
+      searchTerm: adminsData.searchTerm,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
       editAdmin,
-      flash
+      flash: viewFlash
     });
   } catch (error) {
     return next(error);
   }
 }
-
 async function postAddAdmin(req, res) {
   try {
-    await adminService.createAdmin(req.body, req.session.AdminRole);
-    setFlash(req, 'تمت إضافة المسؤول بنجاح.', 'success');
+    const createdAdmin = await adminService.createAdmin(req.body, getActorContext(req));
+    setFlash(
+      req,
+      `\u062a\u0645\u062a \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0628\u0646\u062c\u0627\u062d. \u0643\u0648\u062f \u062a\u0633\u062c\u064a\u0644 \u062f\u062e\u0648\u0644\u0647: ${createdAdmin.admin_id}`,
+      'success'
+    );
     return res.redirect('/admin/admins');
   } catch (error) {
-    setFlash(req, error.message || 'حدث خطأ أثناء إضافة المسؤول.', 'error');
+    setFlash(req, error.message || '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644.', 'error');
     return res.redirect('/admin/admins');
   }
 }
@@ -178,25 +241,27 @@ async function postUpdateAdmin(req, res) {
   try {
     const adminId = parsePositiveId(req.params.adminId);
     if (!adminId) {
-      setFlash(req, 'معرف المسؤول غير صالح.', 'error');
+      setFlash(req, '\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d.', 'error');
       return res.redirect('/admin/admins');
     }
 
     const updatedAdmin = await adminService.updateAdmin(adminId, req.body, {
       adminId: req.session.AdminId,
-      role: req.session.AdminRole
+      role: req.session.AdminRole,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
     });
 
     if (adminId === req.session.AdminId) {
       req.session.AdminUsername = updatedAdmin.admin_name;
-      req.session.AdminRole = updatedAdmin.role;
+      req.session.AdminRole = normalizeAdminRole(updatedAdmin.role);
       await saveSession(req);
     }
 
-    setFlash(req, 'تم تعديل بيانات المسؤول بنجاح.', 'success');
+    setFlash(req, '\u062a\u0645 \u062a\u0639\u062f\u064a\u0644 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0628\u0646\u062c\u0627\u062d.', 'success');
     return res.redirect('/admin/admins');
   } catch (error) {
-    setFlash(req, error.message || 'حدث خطأ أثناء تعديل المسؤول.', 'error');
+    setFlash(req, error.message || '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0645\u0633\u0624\u0648\u0644.', 'error');
     return res.redirect(`/admin/admins?editId=${encodeURIComponent(req.params.adminId)}`);
   }
 }
@@ -205,32 +270,35 @@ async function postDeleteAdmin(req, res) {
   try {
     const adminId = parsePositiveId(req.params.adminId || req.params.id);
     if (!adminId) {
-      setFlash(req, 'معرف المسؤول غير صالح.', 'error');
+      setFlash(req, '\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d.', 'error');
       return res.redirect('/admin/admins');
     }
 
     const deleted = await adminService.deleteAdmin(adminId, {
       adminId: req.session.AdminId,
-      role: req.session.AdminRole
+      role: req.session.AdminRole,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
     });
 
     if (!deleted) {
-      setFlash(req, 'المسؤول المطلوب غير موجود.', 'error');
+      setFlash(req, '\u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f.', 'error');
       return res.redirect('/admin/admins');
     }
 
-    setFlash(req, 'تم حذف المسؤول بنجاح.', 'success');
+    setFlash(req, '\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0628\u0646\u062c\u0627\u062d.', 'success');
     return res.redirect('/admin/admins');
   } catch (error) {
-    setFlash(req, error.message || 'حدث خطأ أثناء حذف المسؤول.', 'error');
+    setFlash(req, error.message || '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u062d\u0630\u0641 \u0627\u0644\u0645\u0633\u0624\u0648\u0644.', 'error');
     return res.redirect('/admin/admins');
   }
 }
 
 async function getStudents(req, res, next) {
   try {
-    const [students, flash] = await Promise.all([
-      adminService.listStudents(),
+    const listOptions = parseListOptions(req.query);
+    const [studentsData, flash] = await Promise.all([
+      adminService.listStudents(listOptions),
       Promise.resolve(getFlash(req))
     ]);
 
@@ -241,9 +309,12 @@ async function getStudents(req, res, next) {
     }
 
     return res.render('admin/students', {
-      title: 'إدارة الطلاب',
+      title: '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0637\u0644\u0627\u0628',
       ...adminViewData(req, '/admin/students'),
-      students,
+      students: studentsData.rows,
+      pagination: studentsData.pagination,
+      searchTerm: studentsData.searchTerm,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
       editStudent,
       formOptions: {
         years: STUDENT_YEAR_OPTIONS,
@@ -261,11 +332,11 @@ async function postSaveStudent(req, res) {
   const redirectEdit = editId ? `?editId=${editId}` : '';
 
   try {
-    const result = await adminService.saveStudent(req.body, req.file, req.session.AdminId);
-    setFlash(req, result.isEditMode ? 'تم تعديل بيانات الطالب بنجاح.' : 'تم إضافة الطالب بنجاح.', 'success');
+    const result = await adminService.saveStudent(req.body, req.file, req.session.AdminId, getActorContext(req));
+    setFlash(req, result.isEditMode ? '\u062a\u0645 \u062a\u0639\u062f\u064a\u0644 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0637\u0627\u0644\u0628 \u0628\u0646\u062c\u0627\u062d.' : '\u062a\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0637\u0627\u0644\u0628 \u0628\u0646\u062c\u0627\u062d.', 'success');
     return res.redirect('/admin/students');
   } catch (error) {
-    setFlash(req, error.message || 'حدث خطأ أثناء الحفظ.', 'error');
+    setFlash(req, error.message || '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u062d\u0641\u0638.', 'error');
     return res.redirect(`/admin/students${redirectEdit}`);
   }
 }
@@ -274,28 +345,29 @@ async function postDeleteStudent(req, res) {
   try {
     const studentId = parsePositiveId(req.params.studentId);
     if (!studentId) {
-      setFlash(req, 'معرف الطالب غير صالح.', 'error');
+      setFlash(req, '\u0645\u0639\u0631\u0641 \u0627\u0644\u0637\u0627\u0644\u0628 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d.', 'error');
       return res.redirect('/admin/students');
     }
 
-    const deleted = await adminService.deleteStudent(studentId);
+    const deleted = await adminService.deleteStudent(studentId, getActorContext(req));
     if (!deleted) {
-      setFlash(req, 'الطالب المطلوب غير موجود.', 'error');
+      setFlash(req, '\u0627\u0644\u0637\u0627\u0644\u0628 \u0627\u0644\u0645\u0637\u0644\u0648\u0628 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f.', 'error');
       return res.redirect('/admin/students');
     }
 
-    setFlash(req, 'تم حذف الطالب بنجاح.', 'success');
+    setFlash(req, '\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u0637\u0627\u0644\u0628 \u0628\u0646\u062c\u0627\u062d.', 'success');
     return res.redirect('/admin/students');
   } catch (error) {
-    setFlash(req, `حدث خطأ أثناء الحذف: ${error.message}`, 'error');
+    setFlash(req, `\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u062d\u0630\u0641: ${error.message}`, 'error');
     return res.redirect('/admin/students');
   }
 }
 
 async function getProfessors(req, res, next) {
   try {
-    const [professors, flash] = await Promise.all([
-      adminService.listProfessors(),
+    const listOptions = parseListOptions(req.query);
+    const [professorsData, flash] = await Promise.all([
+      adminService.listProfessors(listOptions),
       Promise.resolve(getFlash(req))
     ]);
 
@@ -306,9 +378,12 @@ async function getProfessors(req, res, next) {
     }
 
     return res.render('admin/professors', {
-      title: 'إدارة الدكاترة',
+      title: '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062f\u0643\u0627\u062a\u0631\u0629',
       ...adminViewData(req, '/admin/professors'),
-      professors,
+      professors: professorsData.rows,
+      pagination: professorsData.pagination,
+      searchTerm: professorsData.searchTerm,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
       editProfessor,
       formOptions: {
         years: STUDENT_YEAR_OPTIONS,
@@ -326,16 +401,16 @@ async function postSaveProfessor(req, res) {
 
   try {
     if (editId) {
-      await adminService.updateProfessor(editId, req.body, req.file);
-      setFlash(req, 'تم تعديل بيانات الدكتور بنجاح.', 'success');
+      await adminService.updateProfessor(editId, req.body, req.file, getActorContext(req));
+      setFlash(req, '\u062a\u0645 \u062a\u0639\u062f\u064a\u0644 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u062f\u0643\u062a\u0648\u0631 \u0628\u0646\u062c\u0627\u062d.', 'success');
       return res.redirect('/admin/professors');
     }
 
-    await adminService.createProfessor(req.body, req.file);
-    setFlash(req, 'تم إضافة الدكتور بنجاح.', 'success');
+    await adminService.createProfessor(req.body, req.file, getActorContext(req));
+    setFlash(req, '\u062a\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062f\u0643\u062a\u0648\u0631 \u0628\u0646\u062c\u0627\u062d.', 'success');
     return res.redirect('/admin/professors');
   } catch (error) {
-    setFlash(req, error.message || 'حدث خطأ أثناء الحفظ.', 'error');
+    setFlash(req, error.message || '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u062d\u0641\u0638.', 'error');
     return res.redirect(editId ? `/admin/professors?editId=${editId}` : '/admin/professors');
   }
 }
@@ -344,36 +419,40 @@ async function postDeleteProfessor(req, res) {
   try {
     const professorId = parsePositiveId(req.params.professorId);
     if (!professorId) {
-      setFlash(req, 'معرف الدكتور غير صالح.', 'error');
+      setFlash(req, '\u0645\u0639\u0631\u0641 \u0627\u0644\u062f\u0643\u062a\u0648\u0631 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d.', 'error');
       return res.redirect('/admin/professors');
     }
 
-    const deleted = await adminService.deleteProfessorCascade(professorId);
+    const deleted = await adminService.deleteProfessorCascade(professorId, getActorContext(req));
     if (!deleted) {
-      setFlash(req, 'الدكتور المطلوب غير موجود.', 'error');
+      setFlash(req, '\u0627\u0644\u062f\u0643\u062a\u0648\u0631 \u0627\u0644\u0645\u0637\u0644\u0648\u0628 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f.', 'error');
       return res.redirect('/admin/professors');
     }
 
-    setFlash(req, 'تم حذف الدكتور وكل متعلقاته بنجاح.', 'success');
+    setFlash(req, '\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u062f\u0643\u062a\u0648\u0631 \u0648\u0643\u0644 \u0645\u062a\u0639\u0644\u0642\u0627\u062a\u0647 \u0628\u0646\u062c\u0627\u062d.', 'success');
     return res.redirect('/admin/professors');
   } catch (error) {
-    setFlash(req, `حدث خطأ أثناء الحذف: ${error.message}`, 'error');
+    setFlash(req, `\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u062d\u0630\u0641: ${error.message}`, 'error');
     return res.redirect('/admin/professors');
   }
 }
 
 async function getLectures(req, res, next) {
   try {
+    const listOptions = parseListOptions(req.query);
     const [data, flash] = await Promise.all([
-      adminService.listLecturesWithProfessors(),
+      adminService.listLecturesWithProfessors(listOptions),
       Promise.resolve(getFlash(req))
     ]);
 
     return res.render('admin/lectures', {
-      title: 'إدارة المحاضرات',
+      title: '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062d\u0627\u0636\u0631\u0627\u062a',
       ...adminViewData(req, '/admin/lectures'),
       professors: data.professors,
       lectures: data.lectures,
+      pagination: data.pagination,
+      searchTerm: data.searchTerm,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
       flash
     });
   } catch (error) {
@@ -383,11 +462,11 @@ async function getLectures(req, res, next) {
 
 async function postAddLecture(req, res) {
   try {
-    await adminService.createLecture(req.body, req.file);
-    setFlash(req, 'تمت إضافة المحاضرة بنجاح!', 'success');
+    await adminService.createLecture(req.body, req.file, getActorContext(req));
+    setFlash(req, '\u062a\u0645\u062a \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u062d\u0627\u0636\u0631\u0629 \u0628\u0646\u062c\u0627\u062d!', 'success');
     return res.redirect('/admin/lectures');
   } catch (error) {
-    setFlash(req, error.message || 'حدث خطأ أثناء الرفع.', 'error');
+    setFlash(req, error.message || '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u0631\u0641\u0639.', 'error');
     return res.redirect('/admin/lectures');
   }
 }
@@ -396,36 +475,40 @@ async function postDeleteLecture(req, res) {
   try {
     const lectureId = parsePositiveId(req.params.lectureId);
     if (!lectureId) {
-      setFlash(req, 'معرف المحاضرة غير صالح.', 'error');
+      setFlash(req, '\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u062d\u0627\u0636\u0631\u0629 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d.', 'error');
       return res.redirect('/admin/lectures');
     }
 
-    const deleted = await adminService.deleteLecture(lectureId);
+    const deleted = await adminService.deleteLecture(lectureId, getActorContext(req));
     if (!deleted) {
-      setFlash(req, 'المحاضرة المطلوبة غير موجودة.', 'error');
+      setFlash(req, '\u0627\u0644\u0645\u062d\u0627\u0636\u0631\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f\u0629.', 'error');
       return res.redirect('/admin/lectures');
     }
 
-    setFlash(req, 'تم حذف المحاضرة بنجاح.', 'success');
+    setFlash(req, '\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u0645\u062d\u0627\u0636\u0631\u0629 \u0628\u0646\u062c\u0627\u062d.', 'success');
     return res.redirect('/admin/lectures');
   } catch (error) {
-    setFlash(req, `حدث خطأ أثناء الحذف: ${error.message}`, 'error');
+    setFlash(req, `\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u062d\u0630\u0641: ${error.message}`, 'error');
     return res.redirect('/admin/lectures');
   }
 }
 
 async function getSheets(req, res, next) {
   try {
+    const listOptions = parseListOptions(req.query);
     const [data, flash] = await Promise.all([
-      adminService.listSheetsWithProfessors(),
+      adminService.listSheetsWithProfessors(listOptions),
       Promise.resolve(getFlash(req))
     ]);
 
     return res.render('admin/sheets', {
-      title: 'إدارة الشيتات',
+      title: '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0634\u064a\u062a\u0627\u062a',
       ...adminViewData(req, '/admin/sheets'),
       professors: data.professors,
       sheets: data.sheets,
+      pagination: data.pagination,
+      searchTerm: data.searchTerm,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
       flash
     });
   } catch (error) {
@@ -435,11 +518,11 @@ async function getSheets(req, res, next) {
 
 async function postAddSheet(req, res) {
   try {
-    await adminService.createSheet(req.body, req.file);
-    setFlash(req, 'تمت إضافة الشيت بنجاح!', 'success');
+    await adminService.createSheet(req.body, req.file, getActorContext(req));
+    setFlash(req, '\u062a\u0645\u062a \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0634\u064a\u062a \u0628\u0646\u062c\u0627\u062d!', 'success');
     return res.redirect('/admin/sheets');
   } catch (error) {
-    setFlash(req, error.message || 'حدث خطأ أثناء الرفع.', 'error');
+    setFlash(req, error.message || '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u0631\u0641\u0639.', 'error');
     return res.redirect('/admin/sheets');
   }
 }
@@ -448,20 +531,20 @@ async function postDeleteSheet(req, res) {
   try {
     const sheetId = parsePositiveId(req.params.sheetId);
     if (!sheetId) {
-      setFlash(req, 'معرف الشيت غير صالح.', 'error');
+      setFlash(req, '\u0645\u0639\u0631\u0641 \u0627\u0644\u0634\u064a\u062a \u063a\u064a\u0631 \u0635\u0627\u0644\u062d.', 'error');
       return res.redirect('/admin/sheets');
     }
 
-    const deleted = await adminService.deleteSheet(sheetId);
+    const deleted = await adminService.deleteSheet(sheetId, getActorContext(req));
     if (!deleted) {
-      setFlash(req, 'الشيت المطلوب غير موجود.', 'error');
+      setFlash(req, '\u0627\u0644\u0634\u064a\u062a \u0627\u0644\u0645\u0637\u0644\u0648\u0628 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f.', 'error');
       return res.redirect('/admin/sheets');
     }
 
-    setFlash(req, 'تم حذف الشيت بنجاح.', 'success');
+    setFlash(req, '\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u0634\u064a\u062a \u0628\u0646\u062c\u0627\u062d.', 'success');
     return res.redirect('/admin/sheets');
   } catch (error) {
-    setFlash(req, `حدث خطأ أثناء الحذف: ${error.message}`, 'error');
+    setFlash(req, `\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u062d\u0630\u0641: ${error.message}`, 'error');
     return res.redirect('/admin/sheets');
   }
 }

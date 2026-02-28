@@ -21,6 +21,7 @@
     </h5>
 
     <form action="/admin/students/save" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="edit_id" value="<%= editStudent ? editStudent.student_id : '' %>">
 
       <div class="row g-3">
@@ -68,17 +69,25 @@
   </div>
 
   <div class="row align-items-center mb-4 g-3">
-    <div class="col-md-6">
+    <div class="col-md-5">
       <div class="d-flex align-items-center gap-2">
         <i class="bi bi-list-ul text-primary"></i>
         <h5 class="fw-bold mb-0">قائمة الطلاب المسجلين</h5>
       </div>
     </div>
-    <div class="col-md-6">
-      <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
-        <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
-        <input type="text" id="studentSearch" class="form-control border-0 py-2 small" placeholder="ابحث بالاسم أو كود الطالب..." onkeyup="filterStudents()">
-      </div>
+    <div class="col-md-7">
+      <form method="get" action="/admin/students" class="d-flex gap-2 align-items-center">
+        <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
+          <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" name="q" class="form-control border-0 py-2 small" placeholder="ابحث بالاسم أو كود الطالب..." value="<%= searchTerm || '' %>">
+        </div>
+        <select name="page_size" class="form-select form-select-sm w-auto rounded-pill px-3">
+          <% pageSizeOptions.forEach((size) => { %>
+          <option value="<%= size %>" <%= pagination && pagination.pageSize === size ? 'selected' : '' %>><%= size %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-outline-primary rounded-pill px-3">بحث</button>
+      </form>
     </div>
   </div>
 
@@ -108,8 +117,9 @@
           <td class="text-center">
             <div class="btn-group shadow-sm rounded-pill overflow-hidden">
               <a class="btn btn-warning btn-sm text-white px-3" href="/admin/students?editId=<%= student.student_id %>"><i class="bi bi-pencil-square"></i></a>
-              <form action="/admin/students/delete/<%= student.student_id %>" method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا الطالب نهائياً؟');">
-                <button type="submit" class="btn btn-outline-danger btn-sm px-3"><i class="bi bi-trash"></i></button>
+              <form action="/admin/students/delete/<%= student.student_id %>" method="post" data-confirm="هل أنت متأكد من حذف هذا الطالب نهائيًا؟">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="btn btn-delete-soft btn-sm px-3"><i class="bi bi-trash3-fill"></i></button>
               </form>
             </div>
           </td>
@@ -121,29 +131,16 @@
 
   <% if (!students.length) { %>
   <div class="text-center py-5 opacity-50">
-    <i class="bi bi-person-x fa-3x d-block mb-3"></i>
-    <h6>لا يوجد طلاب مسجلين في النظام حالياً</h6>
+    <i class="bi bi-person-x fs-1 d-block mb-3"></i>
+    <h6>لا يوجد طلاب مسجلين في النظام حاليًا</h6>
   </div>
   <% } %>
+
+  <%- include('../partials/admin_pagination', {
+    pagination: pagination,
+    searchTerm: searchTerm,
+    basePath: '/admin/students'
+  }) %>
 </div>
-
-<script>
-  function filterStudents() {
-    const input = document.getElementById('studentSearch');
-    const filter = input.value.toLowerCase();
-    const table = document.querySelector('.table');
-    const rows = table.getElementsByTagName('tr');
-
-    for (let i = 1; i < rows.length; i += 1) {
-      const nameCol = rows[i].getElementsByTagName('td')[0];
-      const idCol = rows[i].getElementsByTagName('td')[1];
-      if (nameCol && idCol) {
-        const nameText = nameCol.textContent || nameCol.innerText;
-        const idText = idCol.textContent || idCol.innerText;
-        rows[i].style.display = (nameText.toLowerCase().includes(filter) || idText.toLowerCase().includes(filter)) ? '' : 'none';
-      }
-    }
-  }
-</script>
 
 <%- include('../partials/admin_bottom', { flash: flash }) %>

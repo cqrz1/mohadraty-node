@@ -14,6 +14,34 @@
           adminSidebar.classList.toggle('show');
         });
       }
+
+      document.querySelectorAll('form[data-confirm]').forEach((form) => {
+        form.addEventListener('submit', (event) => {
+          if (form.dataset.confirmed === 'true') {
+            return;
+          }
+
+          event.preventDefault();
+          Swal.fire({
+            icon: 'warning',
+            title: 'تأكيد العملية',
+            text: form.getAttribute('data-confirm') || 'هل أنت متأكد؟',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، تأكيد',
+            cancelButtonText: 'إلغاء',
+            customClass: {
+              confirmButton: 'btn btn-danger px-4 rounded-pill mx-2',
+              cancelButton: 'btn btn-outline-secondary px-4 rounded-pill mx-2'
+            },
+            buttonsStyling: false
+          }).then((result) => {
+            if (result.isConfirmed) {
+              form.dataset.confirmed = 'true';
+              form.submit();
+            }
+          });
+        });
+      });
     });
   </script>
 
@@ -22,7 +50,7 @@
     Swal.fire({
       icon: '<%= flash.type || "info" %>',
       title: '<%= (flash.type === "success") ? "عملية ناجحة" : "تنبيه" %>',
-      text: '<%= flash.message %>',
+      text: <%- JSON.stringify(flash.message) %>,
       confirmButtonText: 'حسنًا',
       customClass: { confirmButton: 'btn btn-primary px-4 rounded-pill' },
       buttonsStyling: false

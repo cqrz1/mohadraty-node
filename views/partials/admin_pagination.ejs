@@ -1,0 +1,29 @@
+<% if (pagination && pagination.totalPages > 1) { %>
+<%
+  const queryParams = new URLSearchParams();
+  if (searchTerm) queryParams.set('q', searchTerm);
+  if (pagination.pageSize) queryParams.set('page_size', String(pagination.pageSize));
+  const pageUrl = (pageNumber) => {
+    queryParams.set('page', String(pageNumber));
+    return `${basePath}?${queryParams.toString()}`;
+  };
+%>
+<nav aria-label="Pagination" class="mt-4">
+  <ul class="pagination justify-content-center gap-2 flex-wrap">
+    <li class="page-item <%= pagination.hasPrev ? '' : 'disabled' %>">
+      <a class="page-link rounded-pill px-3" href="<%= pagination.hasPrev ? pageUrl(pagination.page - 1) : '#' %>">السابق</a>
+    </li>
+
+    <% for (let pageIndex = 1; pageIndex <= pagination.totalPages; pageIndex += 1) { %>
+    <li class="page-item <%= pageIndex === pagination.page ? 'active' : '' %>">
+      <a class="page-link rounded-pill px-3" href="<%= pageUrl(pageIndex) %>"><%= pageIndex %></a>
+    </li>
+    <% } %>
+
+    <li class="page-item <%= pagination.hasNext ? '' : 'disabled' %>">
+      <a class="page-link rounded-pill px-3" href="<%= pagination.hasNext ? pageUrl(pagination.page + 1) : '#' %>">التالي</a>
+    </li>
+  </ul>
+</nav>
+<% } %>
+

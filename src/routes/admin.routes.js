@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const adminController = require('../controllers/admin.controller');
 const { requireAdmin, requireSuperAdmin } = require('../middlewares/auth');
 const {
@@ -8,6 +8,7 @@ const {
   sheetUpload
 } = require('../middlewares/upload');
 const { setFlash } = require('../services/flash.service');
+const { authRateLimit, csrfProtection, attachCsrfToken } = require('../middlewares/security');
 
 const router = express.Router();
 
@@ -40,53 +41,57 @@ function uploadSingle(uploadMiddleware, fieldName, redirectPath) {
   };
 }
 
-router.get('/login', adminController.getLogin);
-router.post('/login', adminController.postLogin);
+router.get('/login', csrfProtection, attachCsrfToken, adminController.getLogin);
+router.post('/login', authRateLimit, csrfProtection, attachCsrfToken, adminController.postLogin);
 
 router.get('/logout', requireAdmin, adminController.logout);
-router.get('/', requireAdmin, adminController.getDashboard);
+router.get('/', requireAdmin, csrfProtection, attachCsrfToken, adminController.getDashboard);
 
-router.get('/admins', requireAdmin, adminController.getAdmins);
-router.post('/admins/add', requireAdmin, adminController.postAddAdmin);
-router.post('/admins/update/:adminId', requireSuperAdmin, adminController.postUpdateAdmin);
-router.post('/admins/delete/:adminId', requireSuperAdmin, adminController.postDeleteAdmin);
-router.post('/delete/:id', requireSuperAdmin, adminController.postDeleteAdmin);
-router.delete('/delete/:id', requireSuperAdmin, adminController.postDeleteAdmin);
+router.get('/admins', requireAdmin, csrfProtection, attachCsrfToken, adminController.getAdmins);
+router.post('/admins/add', requireSuperAdmin, csrfProtection, adminController.postAddAdmin);
+router.post('/admins/update/:adminId', requireSuperAdmin, csrfProtection, adminController.postUpdateAdmin);
+router.post('/admins/delete/:adminId', requireSuperAdmin, csrfProtection, adminController.postDeleteAdmin);
+router.post('/delete/:id', requireSuperAdmin, csrfProtection, adminController.postDeleteAdmin);
+router.delete('/delete/:id', requireSuperAdmin, csrfProtection, adminController.postDeleteAdmin);
 
-router.get('/students', requireAdmin, adminController.getStudents);
+router.get('/students', requireAdmin, csrfProtection, attachCsrfToken, adminController.getStudents);
 router.post(
   '/students/save',
   requireAdmin,
   uploadSingle(studentPhotoUpload, 'student_photo', '/admin/students'),
+  csrfProtection,
   adminController.postSaveStudent
 );
-router.post('/students/delete/:studentId', requireAdmin, adminController.postDeleteStudent);
+router.post('/students/delete/:studentId', requireAdmin, csrfProtection, adminController.postDeleteStudent);
 
-router.get('/professors', requireAdmin, adminController.getProfessors);
+router.get('/professors', requireAdmin, csrfProtection, attachCsrfToken, adminController.getProfessors);
 router.post(
   '/professors/save',
   requireAdmin,
   uploadSingle(professorPhotoUpload, 'professor_photo', '/admin/professors'),
+  csrfProtection,
   adminController.postSaveProfessor
 );
-router.post('/professors/delete/:professorId', requireSuperAdmin, adminController.postDeleteProfessor);
+router.post('/professors/delete/:professorId', requireSuperAdmin, csrfProtection, adminController.postDeleteProfessor);
 
-router.get('/lectures', requireAdmin, adminController.getLectures);
+router.get('/lectures', requireAdmin, csrfProtection, attachCsrfToken, adminController.getLectures);
 router.post(
   '/lectures/add',
   requireAdmin,
   uploadSingle(lectureUpload, 'lecture_file', '/admin/lectures'),
+  csrfProtection,
   adminController.postAddLecture
 );
-router.post('/lectures/delete/:lectureId', requireSuperAdmin, adminController.postDeleteLecture);
+router.post('/lectures/delete/:lectureId', requireSuperAdmin, csrfProtection, adminController.postDeleteLecture);
 
-router.get('/sheets', requireAdmin, adminController.getSheets);
+router.get('/sheets', requireAdmin, csrfProtection, attachCsrfToken, adminController.getSheets);
 router.post(
   '/sheets/add',
   requireAdmin,
   uploadSingle(sheetUpload, 'sheet_file', '/admin/sheets'),
+  csrfProtection,
   adminController.postAddSheet
 );
-router.post('/sheets/delete/:sheetId', requireSuperAdmin, adminController.postDeleteSheet);
+router.post('/sheets/delete/:sheetId', requireSuperAdmin, csrfProtection, adminController.postDeleteSheet);
 
 module.exports = router;

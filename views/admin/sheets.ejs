@@ -1,4 +1,4 @@
-<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole }) %>
+<%- include('../partials/admin_top', { title: title, activePath: activePath, adminRole: adminRole, adminRoleLabel: adminRoleLabel }) %>
 <div class="container pb-5">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="d-flex align-items-center gap-3">
@@ -19,19 +19,43 @@
     <h5 class="fw-bold mb-4 text-success"><i class="bi bi-file-earmark-plus me-2"></i>رفع شيت جديد</h5>
 
     <form action="/admin/sheets/add" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="row g-3">
-        <div class="col-md-6">
+        <div class="col-md-4">
           <label class="form-label small fw-bold">عنوان الشيت</label>
           <input type="text" name="sheet_name" class="form-control" placeholder="مثال: شيت الأسبوع الأول">
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           <label class="form-label small fw-bold">الدكتور المسؤول</label>
-          <select name="professor_id" class="form-select">
+          <select name="professor_id" id="sheet_professor_id" class="form-select" required>
             <option value="">اختر دكتور...</option>
             <% professors.forEach((professor) => { %>
             <option value="<%= professor.professor_id %>"><%= professor.professor_name %></option>
             <% }) %>
           </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold">المادة</label>
+          <select name="subject_name" id="sheet_subject_name" class="form-select" required>
+            <option value="">اختر المادة...</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-1">
+        <div class="col-md-4">
+          <label class="form-label small fw-bold">القسم + السنة الدراسية</label>
+          <select name="teaching_scope" id="sheet_teaching_scope" class="form-select" required>
+            <option value="">اختر القسم والسنة...</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold">القسم المحدد</label>
+          <input type="text" id="sheet_scope_major" class="form-control" placeholder="يتم تحديده بالاختيار" readonly>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-bold">السنة المحددة</label>
+          <input type="text" id="sheet_scope_year" class="form-control" placeholder="يتم تحديدها بالاختيار" readonly>
         </div>
       </div>
 
@@ -53,17 +77,25 @@
   </div>
 
   <div class="row align-items-center mb-4 g-3">
-    <div class="col-md-6">
+    <div class="col-md-5">
       <div class="d-flex align-items-center gap-2">
         <i class="bi bi-files text-success"></i>
-        <h5 class="fw-bold mb-0">الشيتات المسجلة حالياً</h5>
+        <h5 class="fw-bold mb-0">الشيتات المسجلة حاليًا</h5>
       </div>
     </div>
-    <div class="col-md-6">
-      <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
-        <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
-        <input type="text" id="sheetSearch" class="form-control border-0 py-2 small" placeholder="ابحث باسم الشيت أو الدكتور..." onkeyup="filterSheets()">
-      </div>
+    <div class="col-md-7">
+      <form method="get" action="/admin/sheets" class="d-flex gap-2 align-items-center">
+        <div class="input-group search-group shadow-sm rounded-pill overflow-hidden">
+          <span class="input-group-text border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" name="q" class="form-control border-0 py-2 small" placeholder="ابحث باسم الشيت أو الدكتور..." value="<%= searchTerm || '' %>">
+        </div>
+        <select name="page_size" class="form-select form-select-sm w-auto rounded-pill px-3">
+          <% pageSizeOptions.forEach((size) => { %>
+          <option value="<%= size %>" <%= pagination && pagination.pageSize === size ? 'selected' : '' %>><%= size %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-outline-primary rounded-pill px-3">بحث</button>
+      </form>
     </div>
   </div>
 
@@ -73,6 +105,7 @@
         <tr>
           <th>اسم الشيت</th>
           <th>الدكتور</th>
+          <th>المادة</th>
           <th>التاريخ</th>
           <th class="text-center">إجراءات</th>
         </tr>
@@ -87,11 +120,13 @@
             </div>
           </td>
           <td><span class="text-muted small fw-bold"><i class="bi bi-person-badge-fill small me-1"></i><%= sheet.professor_name %></span></td>
+          <td><span class="badge bg-primary-subtle text-primary"><%= sheet.subject_name || '-' %></span></td>
           <td><span class="badge status-badge"><%= sheet.sheet_date %></span></td>
           <td class="text-center">
-            <% if (isSuperAdmin) { %>
-            <form action="/admin/sheets/delete/<%= sheet.sheet_id %>" method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا الشيت نهائياً؟');">
-              <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash-fill fs-5"></i></button>
+            <% if (canDeleteContent) { %>
+            <form action="/admin/sheets/delete/<%= sheet.sheet_id %>" method="post" data-confirm="هل أنت متأكد من حذف هذا الشيت نهائيًا؟">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="btn btn-delete-soft btn-sm px-3"><i class="bi bi-trash3-fill"></i></button>
             </form>
             <% } else { %>
             <span class="text-muted small">عرض فقط</span>
@@ -105,29 +140,86 @@
 
   <% if (!sheets.length) { %>
   <div class="text-center py-5 opacity-50">
-    <i class="bi bi-file-earmark-x fa-3x d-block mb-3"></i>
-    <h6>لا يوجد شيتات مضافة حالياً</h6>
+    <i class="bi bi-file-earmark-x fs-1 d-block mb-3"></i>
+    <h6>لا يوجد شيتات مضافة حاليًا</h6>
   </div>
   <% } %>
+
+  <%- include('../partials/admin_pagination', {
+    pagination: pagination,
+    searchTerm: searchTerm,
+    basePath: '/admin/sheets'
+  }) %>
 </div>
 
 <script>
-  function filterSheets() {
-    const input = document.getElementById('sheetSearch');
-    const filter = input.value.toLowerCase();
-    const table = document.querySelector('.table');
-    const rows = table.getElementsByTagName('tr');
+  (() => {
+    const professors = <%- JSON.stringify(professors || []).replace(/</g, '\\u003c') %>;
+    const professorSelect = document.getElementById('sheet_professor_id');
+    const subjectSelect = document.getElementById('sheet_subject_name');
+    const scopeSelect = document.getElementById('sheet_teaching_scope');
+    const majorInput = document.getElementById('sheet_scope_major');
+    const yearInput = document.getElementById('sheet_scope_year');
 
-    for (let i = 1; i < rows.length; i += 1) {
-      const nameCol = rows[i].getElementsByTagName('td')[0];
-      const profCol = rows[i].getElementsByTagName('td')[1];
-      if (nameCol && profCol) {
-        const nameText = nameCol.textContent || nameCol.innerText;
-        const profText = profCol.textContent || profCol.innerText;
-        rows[i].style.display = (nameText.toLowerCase().includes(filter) || profText.toLowerCase().includes(filter)) ? '' : 'none';
+    if (!professorSelect || !subjectSelect || !scopeSelect || !majorInput || !yearInput) {
+      return;
+    }
+
+    function clearScopeDetails() {
+      majorInput.value = '';
+      yearInput.value = '';
+    }
+
+    function fillScopeDetails() {
+      const selectedOption = scopeSelect.options[scopeSelect.selectedIndex];
+      if (!selectedOption || !selectedOption.value) {
+        clearScopeDetails();
+        return;
+      }
+
+      majorInput.value = selectedOption.getAttribute('data-major') || '';
+      yearInput.value = selectedOption.getAttribute('data-year') || '';
+    }
+
+    function renderScopeOptions() {
+      const selectedProfessor = professors.find((item) => String(item.professor_id) === String(professorSelect.value));
+      subjectSelect.innerHTML = '<option value="">Select subject...</option>';
+      subjectSelect.disabled = true;
+      if (selectedProfessor && selectedProfessor.subject_name) {
+        const subjectOption = document.createElement('option');
+        subjectOption.value = selectedProfessor.subject_name;
+        subjectOption.textContent = selectedProfessor.subject_name;
+        subjectOption.selected = true;
+        subjectSelect.appendChild(subjectOption);
+        subjectSelect.disabled = false;
+      }
+
+      scopeSelect.innerHTML = '<option value="">Select major/year...</option>';
+      scopeSelect.disabled = true;
+      clearScopeDetails();
+
+      if (!selectedProfessor || !Array.isArray(selectedProfessor.teaching_scopes)) {
+        return;
+      }
+
+      selectedProfessor.teaching_scopes.forEach((scope) => {
+        const option = document.createElement('option');
+        option.value = scope.pair;
+        option.textContent = scope.label;
+        option.setAttribute('data-major', scope.major || '');
+        option.setAttribute('data-year', scope.academic_year || '');
+        scopeSelect.appendChild(option);
+      });
+
+      if (selectedProfessor.teaching_scopes.length) {
+        scopeSelect.disabled = false;
       }
     }
-  }
+
+    professorSelect.addEventListener('change', renderScopeOptions);
+    scopeSelect.addEventListener('change', fillScopeDetails);
+    renderScopeOptions();
+  })();
 </script>
 
 <%- include('../partials/admin_bottom', { flash: flash }) %>

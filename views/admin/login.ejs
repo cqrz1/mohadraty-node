@@ -32,6 +32,7 @@
           </div>
 
           <form action="/admin/login" method="post">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="mb-2 text-end">
               <label class="form-label fw-bold small text-muted px-3 mb-1"><i class="bi bi-person me-1"></i> اسم المستخدم</label>
               <input type="text" name="username" class="form-control" placeholder="أدخل اسم المستخدم" value="<%= formData.username || '' %>">
